@@ -37,27 +37,62 @@ Vec3f reflect_Ray(const Vec3f& normalP, const Vec3f& lightDir) {
 
 
 Vec3f cast_Ray(std::vector<Sphere*>&s_List, std::vector<Lights*>l_List, const Vec3f& origin, const Vec3f& dir, const Lights& l1) {
-	// Iterate over all spheres
+
+	float dist = std::numeric_limits<float>::max();
+	int hIndex = -1;
+	Vec3f hp, N;
+
+
 	for (int i = 0; i < s_List.size(); i++) {
-		//if (rayIntersect(*s_List[i], origin, dir)) { return s_List[i]->s_Material; }
 		float m = rayIntersect(*s_List[i], origin, dir);
-		float dif_LI = 0, spec_LI = 0;
-		if (m > 0.0f){
-			for (int j = 0; j < l_List.size(); j++) {
-				Vec3f hp = origin + dir * m;
-				Vec3f lp = l_List[j]->pos - hp;
-				lp.unitVec();
-				Vec3f N = hp - s_List[i]->s_Center;
-				N.unitVec();
-				dif_LI += l1.intensity * std::max(0.0f, Dot(N, lp));
-				Vec3f rRay = reflect_Ray(N, lp);
-				rRay.unitVec();
-				spec_LI += powf(std::max(0.0f, Dot(rRay, dir)), s_List[i]->specularExponent) * l1.intensity;
-			}
-			return ((s_List[i]->s_Material * dif_LI) + (Vec3f(1.0f, 1.0f, 1.0f) * spec_LI));
-		}				
+		if (m > 0.0f && m < dist) {
+			dist = m;
+			hp = origin + dir * m;
+			N = hp - s_List[i]->s_Center;
+			N.unitVec();
+			hIndex = i;
+		}
 	}
-	return { 0.0f, 0.0f, 0.4f };
+
+	if (hIndex == -1){return { 0.0f, 0.0f, 0.4f };}
+
+	float dif_LI = 0, spec_LI = 0;
+
+	for (int i = 0; i < l_List.size(); i++) {
+		Vec3f lp = l_List[i]->pos - hp;
+		lp.unitVec();
+		dif_LI += l1.intensity * std::max(0.0f, Dot(N, lp));
+		Vec3f rRay = reflect_Ray(N, lp);
+		rRay.unitVec();
+		spec_LI += powf(std::max(0.0f, Dot(rRay, dir)), s_List[i]->specularExponent) * l1.intensity;
+	}
+
+	return ((s_List[hIndex]->s_Material * dif_LI) + (Vec3f(1.0f, 1.0f, 1.0f) * spec_LI));
+
+
+
+
+	// Iterate over all spheres
+	//for (int i = 0; i < s_List.size(); i++) {
+	//	//if (rayIntersect(*s_List[i], origin, dir)) { return s_List[i]->s_Material; }
+	//	float m = rayIntersect(*s_List[i], origin, dir);
+	//	float dif_LI = 0, spec_LI = 0;
+	//	if (m > 0.0f){
+	//		for (int j = 0; j < l_List.size(); j++) {
+	//			Vec3f hp = origin + dir * m;
+	//			Vec3f lp = l_List[j]->pos - hp;
+	//			lp.unitVec();
+	//			Vec3f N = hp - s_List[i]->s_Center;
+	//			N.unitVec();
+	//			dif_LI += l1.intensity * std::max(0.0f, Dot(N, lp));
+	//			Vec3f rRay = reflect_Ray(N, lp);
+	//			rRay.unitVec();
+	//			spec_LI += powf(std::max(0.0f, Dot(rRay, dir)), s_List[i]->specularExponent) * l1.intensity;
+	//		}
+	//		return ((s_List[i]->s_Material * dif_LI) + (Vec3f(1.0f, 1.0f, 1.0f) * spec_LI));
+	//	}				
+	//}
+	//return { 0.0f, 0.0f, 0.4f };
 		
 }
 
@@ -70,11 +105,12 @@ void Render() {
 	std::cout << c1.width << " " << c1.height << std::endl;
 	std::cout << 255 << std::endl;
 
-	Sphere s1{ {-3.5, 0.0f, -5.5}, 1.5, {0.4, 0.4, 0.3}, {0.3, 0.3, 0.0}, 50.0f };
+	//Sphere s1{ {-3.5, 0.0f, -5.5}, 1.5, {0.4, 0.4, 0.3}, {0.3, 0.3, 0.0}, 50.0f };
+	Sphere s1{ {-3.5, 0.0f, -5.5}, 1.5, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, 1425.0f };
 	Sphere s2{ {4.5, -0.5, -10.5}, 2.0, {0.3, 0.1, 0.1}, {0.9, 0.1, 0.0}, 25.0f };
 	Sphere s3{ {4.5, -5.5, -10.5}, 2.0, {0.3, 0.1, 0.1}, {0.1, 0.1, 0.0}, 18.0f };
 	Sphere s4{ {4.5, 5.5, -10.5}, 2.0, {0.3, 0.1, 0.1}, {0.2, 0.2, 0.0}, 50.0f };
-	Sphere s5{ {2.5, 1.5f, -3.5f}, 1.5, {0.1, 0.4, 0.1}, {0.3, 0.3, 0.0}, 20.0f };
+	Sphere s5{ {-2.5, 1.5f, -4.0f}, 1.0f, {0.1, 0.4, 0.1}, {0.3, 0.3, 0.0}, 20.0f };
 	Sphere s6{ {-5.5, 0.0f, -12.5}, 1.0, {0.8, 0.2, 0.0}, {0.3, 0.3, 0.0}, 20.0f };
 
 
@@ -90,7 +126,7 @@ void Render() {
 	sphereList.push_back(&s3);
 	sphereList.push_back(&s4);
 	sphereList.push_back(&s5);
-	sphereList.push_back(&s6);
+	//sphereList.push_back(&s6);
 
 	std::vector<Lights*>lightList;
 	lightList.push_back(&l1);

@@ -38,8 +38,6 @@ public:
 	Vec3f operator*(float t) const;
 	Vec3f operator+(const Vec3f& ref) const;
 
-	
-
 
 	float& operator[](unsigned int i);
 
@@ -48,6 +46,9 @@ public:
 
 	// Unit vector calculation
 	Vec3f& unitVec();
+
+	//Norm
+	float length();
 
 	// Logger
 	void Log();

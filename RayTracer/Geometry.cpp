@@ -110,3 +110,10 @@ Vec3f& Vec3f::unitVec() {
 
 
 }
+
+float Vec3f::length()
+{
+	float lengthS = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+	float length = sqrtf(lengthS);
+	return length;
+}

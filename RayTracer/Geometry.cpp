@@ -54,6 +54,12 @@ bool Vec3f::operator<=(const Vec3f& ref) {
 	return false;
 }
 
+bool Vec3f::operator!=(const Vec3f& ref)
+{
+	if (p[0] != ref.p[0] || p[1] != ref.p[1] || p[2] != ref.p[2]) { return true; }
+	return false;
+}
+
 Vec3f Vec3f::operator-(const Vec3f& ref) const {
 	Vec3f ret;
 	ret[0] = p[0] - ref.p[0];

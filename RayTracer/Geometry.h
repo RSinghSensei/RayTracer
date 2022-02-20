@@ -32,6 +32,7 @@ public:
 
 	Vec3f& operator=(const Vec3f& ref);
 	bool operator<=(const Vec3f& ref);
+	bool operator!=(const Vec3f& ref);
 
 	Vec3f operator-(const Vec3f& ref) const;
 	Vec3f operator/(float t) const;

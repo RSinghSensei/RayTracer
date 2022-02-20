@@ -4,8 +4,8 @@
 
 class Sphere {
 public:
-	Sphere(const Vec3f& center, float radius, const Vec3f& material, const Vec3f& albedo, const float&specular) :
-		s_Center(center), s_Radius(radius), s_Material(material), specularExponent(specular)  {}
+	Sphere(const Vec3f& center, float radius, const Vec3f& material, const Vec3f& m_albedo, const float specular) :
+		s_Center(center), s_Radius(radius), s_Material(material), albedo(m_albedo), specularExponent(specular)  {}
 	Sphere() :
 		s_Radius{} {}	
 

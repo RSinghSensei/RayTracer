@@ -14,10 +14,10 @@ float Dot(const Vec3f& v1, const Vec3f& v2)  {
 }
 
 float rayIntersect(const Sphere& s1, const Vec3f& origin, const Vec3f& dir) {
-	Vec3f _l1 = origin - s1.s_Center;	
+	Vec3f ld1 = origin - s1.s_Center;	
 	float a = Dot(dir, dir);
-	float b = 2.0f * Dot(_l1, dir);
-	float c = Dot(_l1, _l1) - (s1.s_Radius * s1.s_Radius);
+	float b = 2.0f * Dot(ld1, dir);
+	float c = Dot(ld1, ld1) - (s1.s_Radius * s1.s_Radius);
 	float discriminant = b * b - 4 * a * c;
 
 	float sq_discriminant = sqrtf(discriminant);
@@ -25,8 +25,8 @@ float rayIntersect(const Sphere& s1, const Vec3f& origin, const Vec3f& dir) {
 	float distance1 = (-b - sq_discriminant) / (2.0f * a);
 	if (distance1 > 0.1f) {return distance1;}
 
-	distance1 = (-b + sq_discriminant) / (2.0f * a);
-	if (distance1 > 0.1f) { return distance1;}
+	//distance1 = (-b + sq_discriminant) / (2.0f * a);
+	//if (distance1 > 0.1f) { return distance1;}
 
 	return -1.0f;
 
@@ -34,14 +34,15 @@ float rayIntersect(const Sphere& s1, const Vec3f& origin, const Vec3f& dir) {
 
 
 Vec3f reflect_Ray(const Vec3f& normalP, const Vec3f& lightDir) {
-	return lightDir - normalP * 2.0f * Dot(lightDir, normalP);
+	return lightDir - (normalP * 2.0f * Dot(lightDir, normalP));
 
 }
 
 
-Vec3f cast_Ray(const std::vector<std::shared_ptr<Sphere>>&s_List, const std::vector<std::shared_ptr<Lights>>&l_List, const Vec3f& origin, const Vec3f& dir, int f_Depth) {
+Vec3f cast_Ray(const std::vector<std::shared_ptr<Sphere>>&s_List, const std::vector<std::shared_ptr<Lights>>&l_List, const Vec3f& origin, const Vec3f& dir, unsigned int f_Depth) 
+{
 
-	if (f_Depth > 4) { return { 0.0f, 0.0f, 0.4f }; }
+	if (f_Depth > 8) { return { 0.0f, 0.0f, 0.4f }; }
 
 	float dist = std::numeric_limits<float>::max();
 	int hIndex = -1;
@@ -51,7 +52,7 @@ Vec3f cast_Ray(const std::vector<std::shared_ptr<Sphere>>&s_List, const std::vec
 	
 	for (int i = 0; i < s_List.size(); i++) {
 		float m = rayIntersect(*s_List[i], c_Origin, c_Dir);
-		if (m > 0.0f && m < dist) {
+		if (m > 1.0f && m < dist) {
 			dist = m;
 			hp = c_Origin + c_Dir * m;
 			N = hp - s_List[i]->s_Center;
@@ -61,10 +62,9 @@ Vec3f cast_Ray(const std::vector<std::shared_ptr<Sphere>>&s_List, const std::vec
 	}
 
 	if (hIndex == -1){return { 0.0f, 0.0f, 0.4f };}
-
 	r_Dir = reflect_Ray(c_Dir, N).unitVec();
-	r_Origin = Dot(r_Dir, N) < 0 ? hp - N * 1e-3 : hp + N * 1e-3;
-	//Vec3f depthColor = cast_Ray(s_List, l_List, r_Origin, r_Dir, f_Depth + 1);
+	r_Origin = (Dot(r_Dir, N) < 0 ? hp + N * 1e-3: hp - N * 1e-3);
+	Vec3f depthColor = cast_Ray(s_List, l_List, r_Origin, r_Dir, f_Depth + 1);
 
 	float dif_LI = 0, spec_LI = 0;
 
@@ -92,10 +92,9 @@ Vec3f cast_Ray(const std::vector<std::shared_ptr<Sphere>>&s_List, const std::vec
 		dif_LI += l_List[i]->intensity * std::max(0.0f, Dot(N, lp));
 		Vec3f rRay = reflect_Ray(N, lp);
 		rRay.unitVec();
-		spec_LI += powf(std::max(0.0f, Dot(rRay, dir)), s_List[i]->specularExponent) * l_List[i]->intensity;
+		spec_LI += powf(std::max(0.0f, Dot(rRay, dir)), s_List[hIndex]->specularExponent) * l_List[i]->intensity;
 	}
-
-	return ((s_List[hIndex]->s_Material * dif_LI) + (Vec3f(1.0f, 1.0f, 1.0f) * spec_LI))/* + (depthColor * s_List[hIndex]->albedo[2]))*/;
+	return ((s_List[hIndex]->s_Material * dif_LI * s_List[hIndex]->albedo[0]) + (Vec3f(1.0f, 1.0f, 1.0f) * spec_LI * s_List[hIndex]->albedo[1]) + (depthColor * s_List[hIndex]->albedo[2]));
 
 	// Iterate over all spheres
 	//for (int i = 0; i < s_List.size(); i++) {
@@ -130,15 +129,19 @@ void Render() {
 	std::cout << c1.width << " " << c1.height << std::endl;
 	std::cout << 255 << std::endl;
 
-	//Sphere s1{ {-3.5, 0.0f, -5.5}, 1.5, {0.4, 0.4, 0.3}, {0.3, 0.3, 0.0}, 50.0f };
-	std::shared_ptr<Sphere> s1 = std::make_shared<Sphere>(Vec3f{ -3.5, 0.0f, -5.5 }, 1.5, Vec3f{ 1.0f, 1.0f, 1.0f }, Vec3f{ 0.6f, 0.3f, 0.1f }, 1425.0f);
-	std::shared_ptr<Sphere> s2 = std::make_shared<Sphere>(Vec3f{ 4.5, -0.5, -10.5 }, 2.0, Vec3f{ 0.3, 0.1, 0.1 }, Vec3f{ 0.9, 0.1, 0.0 }, 25.0);
-	std::shared_ptr<Sphere> s3 = std::make_shared<Sphere>(Vec3f{ 4.5, -5.5, -10.5 }, 2.0, Vec3f{ 0.3, 0.1, 0.1 }, Vec3f{ 0.1, 0.1, 0.0 }, 18.0f);
-	std::shared_ptr<Sphere> s4 = std::make_shared<Sphere>(Vec3f{ 4.5, 5.5, -10.5 }, 2.0, Vec3f{ 0.3, 0.1, 0.1 }, Vec3f{ 0.2, 0.2, 0.0 }, 50.0f);
-	std::shared_ptr<Sphere> s5 = std::make_shared<Sphere>(Vec3f{ 0.5, 1.5f, -4.0f }, 1.0f, Vec3f{ 0.1, 0.4, 0.1 }, Vec3f{ 0.3, 0.3, 0.0 }, 20.0f);
-	std::shared_ptr<Sphere> s6 = std::make_shared<Sphere>(Vec3f{ -5.5, 0.0f, -12.5 }, 1.0, Vec3f{ 0.8, 0.2, 0.0 }, Vec3f{ 0.3, 0.3, 0.0 }, 20.0f);
+	//Sphere s1{ {-3.5, 0.0f, -5.5}, 1.5, {0.4, 0.4, 0.3}, {0.3, 0.3, 0.0}, 50.0f }; 
+	std::shared_ptr<Sphere> s1 = std::make_shared<Sphere>(Vec3f{ -1.5, -1.0f, -5.5 }, 1.5, Vec3f{ 0.4f, 1.0f, 1.0f }, Vec3f{ 0.0f, 10.0f, 0.8f }, 1425.0f);
+	std::shared_ptr<Sphere> s2 = std::make_shared<Sphere>(Vec3f{ 4.5, -0.5, -10.5 }, 2.0, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.9f, 0.1f, 0.4f}, 25.0);
+	std::shared_ptr<Sphere> s3 = std::make_shared<Sphere>(Vec3f{ 4.5, -5.5, -10.5 }, 2.0, Vec3f(1.0f, 0.8f, 1.0f), Vec3f{ 0.1f, 5.1f, 0.1f }, 18.0f);
+	std::shared_ptr<Sphere> s4 = std::make_shared<Sphere>(Vec3f{ 4.5, 5.5, -10.5 }, 2.0, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.2f, 0.2f, 0.3f }, 50.0f);
+	std::shared_ptr<Sphere> s5 = std::make_shared<Sphere>(Vec3f{ -3.5, 1.5f, -4.0f }, 1.0f, Vec3f(0.9f, 0.1f, 0.0f), Vec3f{ 0.3f, 0.3f, 0.1f }, 20.0f);
+	//std::shared_ptr<Sphere> s6 = std::make_shared<Sphere>(Vec3f{ -5.5, 0.0f, -12.5 }, 1.0, Vec3f{ 0.8, 0.2, 0.0 },Vec3f{ 0.3, 0.3, 0.0 }, 20.0f);
 
-
+	//std::shared_ptr<Sphere> s1 = std::make_shared<Sphere>(Vec3f{ 0.0f, 0.0f, -5.0f }, 2.0f, Vec3f{ 1.0f, 1.0f, 1.0f }, Vec3f{ 0.0f, 10.0f, 0.8f }, 1425.0f);
+	//std::shared_ptr<Sphere> s2 = std::make_shared<Sphere>(Vec3f{ 0.5f, -1.0f, -1.5f }, 0.5f, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.9f, 0.1f, 0.4f }, 25.0);
+	//std::shared_ptr<Sphere> s3 = std::make_shared<Sphere>(Vec3f{ -4.5f, 0.0f, -5.5f }, 1.5f, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.9f, .1f, 0.4f }, 128.0);
+	//std::shared_ptr<Sphere> s3 = std::make_shared<Sphere>(Vec3f{ 4.5, -5.5, -10.5 }, 2.0, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.1f, 5.1f, 0.1f }, 18.0f);
+	//std::shared_ptr<Sphere> s4 = std::make_shared<Sphere>(Vec3f{ 4.5, 5.5, -10.5 }, 2.0, Vec3f(0.6f, 0.3f, 0.1f), Vec3f{ 0.2f, 0.2f, 0.3f }, 50.0f);
 
 	std::shared_ptr<Lights> l1 = std::make_unique<Lights>(Vec3f{ -10.0f, 10.0f, 10.0f }, 2.6f);
 	std::shared_ptr<Lights> l2 = std::make_unique<Lights>(Vec3f{ 50.0f, 30.0f, -25.0f }, 1.1f);
@@ -168,7 +171,7 @@ void Render() {
 			float v = (float)j / (c1.height - 1);
 			Vec3f dir = c1.lowerLeft + (c1.horizontal * u) + (c1.vertical * v) - c1.origin;		
 			dir.unitVec();
-			int f_Depth = 4;
+			unsigned int f_Depth = 0;
 			Vec3f f_Color = cast_Ray(sphereList, lightList, c1.origin, dir, f_Depth);
 			float maxVal = std::max(f_Color[0], std::max(f_Color[1], f_Color[2]));
 			if (maxVal > 1) { maxVal = 1.0f / maxVal; f_Color *= maxVal; }
